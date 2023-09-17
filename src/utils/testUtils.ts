@@ -2,7 +2,7 @@ import { Game } from '@diablosnaps/common';
 
 export const getDefaultContext = ()=> (
     {
-        language: Game.Language.German,
+        language: Game.Language.English,
         affixes: {
             definitions: {
                 basic: {},
