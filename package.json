@@ -44,7 +44,6 @@
     "react-window": "^1.8.9"
   },
   "devDependencies": {
-    "@babel/preset-react": "^7.22.15",
     "@lingui/cli": "^4.3.0",
     "@lingui/format-json": "^4.3.0",
     "@lingui/vite-plugin": "^4.3.0",
