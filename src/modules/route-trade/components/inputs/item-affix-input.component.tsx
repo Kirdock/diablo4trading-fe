@@ -13,18 +13,14 @@ import {
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { matchSorter } from 'match-sorter';
-import React from 'react';
+import React, { ReactElement, useMemo } from 'react';
 import { ListChildComponentProps, VariableSizeList } from 'react-window';
 
 const LISTBOX_PADDING = 8; // px
 
-function renderRow(
-    props: ListChildComponentProps<
-        [React.HTMLAttributes<HTMLLIElement>, { id: string; label: string }][]
-    >,
-) {
-    const { data, index, style } = props;
-    const [componentProps, option] = data[index];
+function Row({ data, index, style }: ListChildComponentProps<React.ReactElement[]>) {
+    const element = data[index];
+    // const [componentProps, option] = data[index]; // What's happening here?
     const inlineStyle = {
         ...style,
         top: (style.top as number) + LISTBOX_PADDING,
@@ -33,11 +29,12 @@ function renderRow(
     return (
         <Typography
             component='li'
-            {...componentProps}
+            // {{...componentProps}}
             noWrap
             style={inlineStyle}
         >
-            {option.label}
+            {/*{option.label}*/}
+            {element}
         </Typography>
     );
 }
@@ -67,52 +64,44 @@ function useResetCache(data: unknown) {
 }
 
 const ListboxComponent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLElement>>(
-    function ListboxComponent(props, ref) {
-        const { children, ...other } = props;
-        const itemData: React.ReactElement[] = [];
-        (children as React.ReactElement[]).forEach(
-            (item: React.ReactElement & { children?: React.ReactElement[] }) => {
-                itemData.push(item);
-                itemData.push(...(item.children || []));
-            },
-        );
-
+    function ListboxComponent({ children, ...other }, ref) {
         const theme = useTheme();
         const smUp = useMediaQuery(theme.breakpoints.up('sm'), {
             noSsr: true,
         });
+        const itemData = useMemo<ReactElement[]>(() => {
+            return React.Children.map(children, child => [child, child &&  typeof child === 'object' && 'children' in child ? child.children : []])
+            ?.flatMap(items => items)
+            .filter((item): item is ReactElement => React.isValidElement(item))
+                ?? [];
+        }, [children]);
+
         const itemCount = itemData.length;
         const itemSize = smUp ? 36 : 48;
 
-        const getChildSize = () => {
-            return itemSize;
-        };
-
-        const getHeight = () => {
-            if (itemCount > 8) {
-                return 8 * itemSize;
-            }
-            return itemData.map(getChildSize).reduce((a, b) => a + b, 0);
-        };
+        const height = useMemo(()=> {
+            return (itemData.length || 8) * itemSize;
+        }, [itemData.length, itemSize]);
 
         const gridRef = useResetCache(itemCount);
+        const getChildSize = () => {
+            return itemSize;
+        }
 
         return (
             <div ref={ref}>
                 <OuterElementContext.Provider value={other}>
-                    <VariableSizeList
+                    <VariableSizeList<ReactElement[]>
                         itemData={itemData}
-                        height={getHeight() + 2 * LISTBOX_PADDING}
+                        height={height + 2 * LISTBOX_PADDING}
                         width='100%'
                         ref={gridRef}
                         outerElementType={OuterElementType}
                         innerElementType='ul'
-                        itemSize={() => getChildSize()}
+                        itemSize={getChildSize}
                         overscanCount={5}
                         itemCount={itemCount}
-                    >
-                        {renderRow}
-                    </VariableSizeList>
+                    >{Row}</VariableSizeList>
                 </OuterElementContext.Provider>
             </div>
         );
